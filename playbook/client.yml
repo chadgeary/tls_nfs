@@ -1,0 +1,84 @@
+---
+- name: tls_nfs_client
+  hosts: localhost
+  gather_facts: yes
+  become: true
+  become_user: root
+  tasks:
+
+# DIRECTORIES
+    - name: defined mount point
+      file:
+        path: "{{ nfs_mount_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: stunnel working dir
+      file:
+        path: /var/empty/stunnel
+        state: directory
+        mode: '0755'
+
+# PACKAGES
+    - name: NFS/STUNNEL Packages (EL7)
+      yum:
+        name: ['nfs-utils','rpcbind','stunnel']
+        state: present
+
+    - name: Copy nfs cert/key
+      copy:
+        src: tls-nfs.pem
+        dest: /etc/stunnel/tls-nfs.pem
+
+# FILES
+    - name: socket
+      template:
+        src: stunnel-nfs-client.socket
+        dest: /etc/systemd/system/stunnel-nfs-client.socket
+        owner: root
+        group: root
+        mode: '0444'
+
+    - name: service
+      template:
+        src: stunnel-nfs-client@.service
+        dest: /etc/systemd/system/stunnel-nfs-client@.service
+        owner: root
+        group: root
+        mode: '0440'
+
+    - name: stunnel conf
+      template:
+        src: stunnel-nfs-client.conf
+        dest: /etc/stunnel/stunnel-nfs-client.conf
+
+# SELINUX
+    - name: Allow NFS RW
+      seboolean:
+        name: nfs_export_all_rw
+        state: yes
+        persistent: yes
+
+    - name: Set stunnel context
+      shell: |
+        chcon -t stunnel_etc_t /etc/stunnel/tls-nfs.pem
+        chcon -t stunnel_etc_t /etc/stunnel/stunnel-nfs-client.conf
+
+# SERVICES
+    - name: stunnel socket
+      systemd:
+        name: stunnel-nfs-client.socket
+        state: started
+        enabled: yes
+        daemon_reload: yes
+
+# MOUNT
+    - name: mount
+      mount:
+        path: "{{ nfs_mount_path }}"
+        src: 127.0.0.1:/
+        fstype: nfs
+        opts: "_netdev,nfsvers=4.1,retrans=2,port={{ server_port }}"
+        state: mounted

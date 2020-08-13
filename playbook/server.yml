@@ -1,0 +1,124 @@
+---
+- name: tls_nfs_server
+  hosts: localhost
+  gather_facts: yes
+  become: true
+  become_user: root
+  tasks:
+
+# DIRECTORIES
+    - name: defined mount point
+      file:
+        path: "{{ nfs_mount_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: stunnel working dir
+      file:
+        path: /var/empty/stunnel
+        state: directory
+        mode: '0755'
+
+# FS / MOUNT / PACKAGES
+
+    - name: Register device name based on blk device size
+      shell: |
+        lsblk | awk '/{{ nfs_size_gb }}G/ { print $1 }'
+      register: block_device
+
+    - name: Ensure Filesystem
+      filesystem:
+        fstype: "{{ nfs_fs_type }}"
+        dev: "/dev/{{ block_device.stdout }}"
+
+    - name: Ensure NFS Mount
+      mount:
+        src: "/dev/{{ block_device.stdout }}"
+        path: "{{ nfs_mount_path }}"
+        fstype: "{{ nfs_fs_type }}"
+        state: present
+
+    - name: NFS/STUNNEL Packages (EL7)
+      yum:
+        name: ['nfs-utils','rpcbind','stunnel']
+        state: present
+
+    - name: Copy nfs cert/key
+      copy:
+        src: tls-nfs.pem
+        dest: /etc/stunnel/tls-nfs.pem
+
+# FILES
+    - name: exports
+      lineinfile:
+        path: /etc/exports
+        line: "{{ item }}"
+        owner: root
+        group: root
+        mode: '0400'
+        create: yes
+      with_items:
+        - "{{ nfs_mount_path }}/    {{ nfs_export_cidr }}(fsid=0,rw,no_root_squash)"
+        - "{{ nfs_mount_path }}/    127.0.0.1(fsid=0,insecure,rw,no_root_squash)"
+
+    - name: nfs sysconfig
+      template:
+        src: nfs.conf
+        dest: /etc/sysconfig/nfs
+        owner: root
+        group: root
+        mode: '0444'
+
+    - name: systemd socket and service units
+      template:
+        src: "{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        owner: root
+        group: root
+        mode: '0444'
+      with_items:
+        - stunnel-nfs.socket
+        - stunnel-nfs@.service
+
+    - name: stunnel conf
+      template:
+        src: stunnel-nfs.conf
+        dest: /etc/stunnel/stunnel-nfs.conf
+        owner: root
+        group: root
+        mode: '0400'
+
+# SELINUX
+    - name: Allow NFS RW
+      seboolean:
+        name: nfs_export_all_rw
+        state: yes
+        persistent: yes
+
+    - name: Set stunnel context
+      shell: |
+        chcon -t stunnel_etc_t /etc/stunnel/tls-nfs.pem
+        chcon -t stunnel_etc_t /etc/stunnel/stunnel-nfs.conf
+
+# SERVICES
+    - name: stop/disable/mask non-nfsv4
+      systemd:
+        state: stopped
+        enabled: no
+        masked: yes
+        name: "{{ item }}"
+      with_items:
+        - rpcbind.service
+        - rpcbind.socket
+
+    - name: start/enable nfs and stunnel
+      systemd:
+        state: started
+        enabled: yes
+        daemon_reload: yes
+        name: "{{ item }}"
+      with_items:
+        - nfs
+        - stunnel-nfs.socket

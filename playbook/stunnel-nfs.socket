@@ -1,0 +1,10 @@
+[Unit]
+Description=NFS over STUNNEL
+
+[Socket]
+ListenStream={{ server_port }}
+Accept=yes
+TimeoutSec=60
+
+[Install]
+WantedBy=sockets.target

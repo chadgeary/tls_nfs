@@ -1,0 +1,6 @@
+[Unit]
+Description=NFS over STUNNEL Service
+
+[Service]
+ExecStart=/usr/bin/stunnel /etc/stunnel/stunnel-nfs.conf
+StandardInput=socket
