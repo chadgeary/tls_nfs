@@ -55,5 +55,5 @@ resource "aws_instance" "tls-nfs-instance-client1" {
     NFS                     = "client"
   }
   user_data               = file("userdata/el7ssm.sh")
-  depends_on              = [aws_instance.tls-nfs-instance-server]
+  depends_on              = [aws_instance.tls-nfs-instance-server, aws_volume_attachment.tls-nfs-ebs-vol1-attach]
 }
