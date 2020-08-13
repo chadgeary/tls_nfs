@@ -48,6 +48,16 @@ resource "aws_security_group_rule" "tls-nfs-sg-server-world-https-out" {
   cidr_blocks             = ["0.0.0.0/0"]
 }
 
+resource "aws_security_group_rule" "tls-nfs-sg-server-client-nfs-in" {
+  security_group_id       = aws_security_group.tls-nfs-sg-server.id
+  type                    = "ingress"
+  description             = "IN FROM CLIENTS - TLS NFSv4"
+  from_port               = var.server_port
+  to_port                 = var.server_port
+  protocol                = "tcp"
+  source_security_group_id = aws_security_group.tls-nfs-sg-clients.id
+}
+
 resource "aws_security_group_rule" "tls-nfs-sg-client-mgmt-ssh-in" {
   security_group_id       = aws_security_group.tls-nfs-sg-clients.id
   type                    = "ingress"
@@ -78,12 +88,12 @@ resource "aws_security_group_rule" "tls-nfs-sg-client-world-https-out" {
   cidr_blocks             = ["0.0.0.0/0"]
 }
 
-resource "aws_security_group_rule" "tls-nfs-sg-server-client-nfs-in" {
-  security_group_id       = aws_security_group.tls-nfs-sg-server.id
-  type                    = "ingress"
-  description             = "IN FROM CLIENTS - TLS NFSv4"
+resource "aws_security_group_rule" "tls-nfs-sg-client-server-nfs-out" {
+  security_group_id       = aws_security_group.tls-nfs-sg-clients.id
+  type                    = "egress"
+  description             = "OUT TO SERVER - TLS NFSv4"
   from_port               = var.server_port
   to_port                 = var.server_port
   protocol                = "tcp"
-  source_security_group_id = aws_security_group.tls-nfs-sg-clients.id
+  source_security_group_id = aws_security_group.tls-nfs-sg-server.id
 }
