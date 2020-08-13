@@ -4,8 +4,8 @@ Terraform with Ansible to create/manage a NFS over TLS server and client for tes
 # Requirements
 - Terraform installed.
 - AWS credentials (e.g. `aws configure` if awscli is installed)
-- Customized variables (see Variables section).
-- PEM key/certificate - see Certificate section.
+- Customized variables, see: Variables section.
+- PEM key/certificate, see: Certificate section.
 
 # Variables
 Edit the vars file (.tfvars) to customize the deployment, especially:
@@ -40,10 +40,13 @@ Generate a key/certificate pair, the key is stored in the encrypted S3 bucket an
 openssl req -x509 -newkey rsa:2049 -days 1500 -nodes \
 -out nfs-cert.pem -keyout tls-nfs.pem \
 -subj "/C=US/ST=Florida/L=Tampa/O=chadg.net/emailAddress=chad@chadg.net/CN=nfstls"
+
 # Append certificate to key file
 cat nfs-cert.pem >> tls-nfs.pem
+
 # Place in playbook directory
 mv tls-nfs.pem playbook/tls-nfs.pem
+
 # Remove certificate file
 rm nfs-cert.pem
 ```
@@ -54,5 +57,5 @@ rm nfs-cert.pem
 terraform init
 
 # Apply terraform - the first apply takes a while creating encrypted AMI(s).
-terraform apply -var-file="tls-nfs.tfvars"
+terraform apply -var-file="tls_nfs.tfvars"
 ```
