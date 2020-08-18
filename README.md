@@ -23,7 +23,7 @@ Edit the vars file (.tfvars) to customize the deployment, especially:
 
 - an AWS user account (not root) that will be granted access to the KMS key (to read S3 objects).
 
-- Don't have an IAM user? Replace all occurrences of `${data.aws_iam_user.tf-nifi-kmsmanager.arn}` with a role ARN (e.g. an Instance Profile ARN), and remove the `aws_iam_user` block in tf-nifi-generic.tf.
+- Don't have an IAM user? Replace all occurrences of `${data.aws_iam_user.tls-nfs-kmsmanager.arn}` with a role ARN (e.g. an Instance Profile ARN), and remove the `aws_iam_user` block in tls_nfs_generic.tf.
 
 **instance_key**
 
